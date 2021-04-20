@@ -7,6 +7,7 @@
 #include <QScreen>
 #include <QDebug>
 #include <QString>
+#include <QHostInfo>
 
 CSlideShow::CSlideShow(int i_nSec, QString sPath, QWidget *parent)
     : QMainWindow(parent)
@@ -15,7 +16,13 @@ CSlideShow::CSlideShow(int i_nSec, QString sPath, QWidget *parent)
     , m_nTimerId (0)
 {
 //    this->setAttribute(Qt::WA_DeleteOnClose);
-    setCursor(Qt::BlankCursor);
+    if(QHostInfo::localHostName().contains("pi"))
+    {
+        setCursor(Qt::BlankCursor);
+        //Needed window flags for only show this widget without frame on top
+        setWindowFlags(Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
+        setWindowState(Qt::WindowFullScreen);
+    }
 
     setupUI();
 
@@ -39,10 +46,6 @@ CSlideShow::CSlideShow(int i_nSec, QString sPath, QWidget *parent)
 
 void CSlideShow::setupUI()
 {
-    //Needed window flags for only show this widget without frame on top
-    setWindowFlags(Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
-    setWindowState(Qt::WindowFullScreen);
-
     m_pLabel = new QLabel(this);
     m_pLabel->setText("Starting Slideshow ...");
 
@@ -133,20 +136,37 @@ void CSlideShow::timerSlot()
 CInfoShow::CInfoShow(QWidget *parent)
     : QMainWindow(parent)
 {
-//    this->setAttribute(Qt::WA_DeleteOnClose);
-    setCursor(Qt::BlankCursor);
+    if(QHostInfo::localHostName().contains("pi"))
+    {
+        setCursor(Qt::BlankCursor);
+
+        //Needed window flags for only show this widget without frame on top
+        setWindowFlags(Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
+        setWindowState(Qt::WindowFullScreen);
+    }
 
     setupUI();
 }
 
 void CInfoShow::setupUI()
 {
-    //Needed window flags for only show this widget without frame on top
-    setWindowFlags(Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
-    setWindowState(Qt::WindowFullScreen);
-
     m_pLabel = new QLabel(this);
-    m_pLabel->setText("Please remove USB Stick, Sytem is going to restart in 30 sec ...");
+
+    recScreen = QGuiApplication::primaryScreen()->geometry();
+
+    QImage myImage;
+    if(myImage.load(":/data/remove"))
+    {
+        myImage = myImage.scaled(recScreen.width(), recScreen.height(), Qt::KeepAspectRatio);
+
+        m_pLabel->setGeometry(recScreen);
+        m_pLabel->setPixmap(QPixmap::fromImage(myImage));
+        m_pLabel->show();
+    }
+    else
+    {
+        m_pLabel->setText("Please remove USB Stick, Sytem is going to restart in 30 sec ...");
+    }
 
     this->setCentralWidget(m_pLabel);
 }

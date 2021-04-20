@@ -57,6 +57,7 @@ private slots:
 
 private:
     QLabel* m_pLabel;
+    QRect recScreen;
 };
 
 

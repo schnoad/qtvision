@@ -20,10 +20,11 @@ class WorkerThread;
 struct Settings{
     int nTimeImage = 0;
     QString sImagepath = "";
-    QString sMotioneyepath = "";
     QString sUsbmount = "";
     bool bAutoStart = false;
     bool bDebug = false;
+    bool bKamera = true;
+    QString sMotioneyepath = "";
 };
 
 class CMainWindow : public QMainWindow
@@ -62,7 +63,7 @@ private:
     bool isVisionUSB(QString sPathtoUSB);
     bool unMountUSB();
     bool mountUSB();
-    bool clearUSB(QString sPathtoClear);
+    bool clearPath(QString sPathtoClear);
     QString m_sSettingsFile;
     Settings m_Settings;
 

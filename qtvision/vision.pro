@@ -34,6 +34,7 @@ FORMS += \
     cmainwindow.ui
 
 RESOURCES += \
+    resource.qrc \
     resources.qrc
 
 # Default rules for deployment.

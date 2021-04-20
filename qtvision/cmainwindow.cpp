@@ -53,14 +53,15 @@ CMainWindow::CMainWindow(QString version, QWidget *parent)
     QString hostName = QHostInfo::localHostName();
     qDebug() << "Running on " << hostName;
 
-    if(hostName.contains("pi"))
+    if(QHostInfo::localHostName().contains("pi"))
     {
         m_sSettingsFile = "/home/pi/vision/settings.ini";
+        setCursor(Qt::BlankCursor);
+        setWindowFlags(Qt::FramelessWindowHint);
+        setWindowState(Qt::WindowFullScreen);
     }
 
     setWindowTitle("vision " + version);
-//    this->setAttribute(Qt::WA_DeleteOnClose);
-    setCursor(Qt::BlankCursor);
 
     loadSettings();
 
@@ -68,8 +69,6 @@ CMainWindow::CMainWindow(QString version, QWidget *parent)
 
     updateSettingsUI();
 
-    setWindowFlags(Qt::FramelessWindowHint);
-    setWindowState(Qt::WindowFullScreen);
 
     // Autostart
     if(m_Settings.bAutoStart)
@@ -205,18 +204,7 @@ void CMainWindow::updateSystemInfo()
        return;
     }
 
-    qDebug() << "CMainWindow::updateSystemInfo()" << "Path to Images: " << m_Settings.sImagepath << "Path to MotionEye: " << m_Settings.sMotioneyepath;
-
-//    if(!m_Settings.sMotioneyepath.isEmpty())
-//    {
-//        m_pMotionEyeModel = new QFileSystemModel(this);
-//        m_pMotionEyeModel->setReadOnly(true);
-//        m_pMotionEyeModel->setFilter(QDir::NoDotAndDotDot | QDir::Files | QDir::Dirs);
-//        m_pMotionEyeModel->setRootPath(m_Settings.sImagepath);
-
-//        m_CentralWidget.motioneyeView->setModel(m_pMotionEyeModel);
-//        m_CentralWidget.motioneyeView->setRootIndex(m_pMotionEyeModel->index(m_Settings.sMotioneyepath));
-//    }
+    qDebug() << "CMainWindow::updateSystemInfo()" << "Path to Images: " << m_Settings.sImagepath;
 
     if(!m_Settings.sImagepath.isEmpty())
     {
@@ -270,14 +258,6 @@ void CMainWindow::usbInserted(QString pathUsb, bool bStartCopy)
         qDebug() << "CMainWindow::usbInserted() update USB UI";
         QString sPathToImagesOnUsb = pathUsb;
 
-//        m_usbModel = new QFileSystemModel(this);
-//        m_usbModel->setReadOnly(true);
-//        m_usbModel->setFilter(QDir::NoDotAndDotDot | QDir::Files | QDir::Dirs);
-//        m_usbModel->setRootPath(sPathToImagesOnUsb);
-
-//        m_CentralWidget.usbView->setModel(m_usbModel);
-//        m_CentralWidget.usbView->setRootIndex(m_usbModel->index(sPathToImagesOnUsb + "/data/"));
-
         m_CentralWidget.groupBoxUSB->setVisible(true);
 
         if(bStartCopy &&
@@ -289,7 +269,6 @@ void CMainWindow::usbInserted(QString pathUsb, bool bStartCopy)
             qDebug() << "CMainWindow::usbInserted() StartCopy";
             m_bCopyRunning = true;
             m_bCopyImagesDone = false;
-            m_bCopyMotionDone = false;
             m_sUSBName = pathUsb;
 
             m_CentralWidget.groupBoxUSB->setVisible(true);
@@ -298,7 +277,7 @@ void CMainWindow::usbInserted(QString pathUsb, bool bStartCopy)
                 qDebug() << "CMainWindow::usbInserted() Files to Transfer from " << sPathToImagesOnUsb + "/data/" << " to: " << m_Settings.sImagepath;
 
                 //need to clear the destination/target
-                clearUSB(m_Settings.sImagepath);
+                clearPath(m_Settings.sImagepath);
 
                 m_workerImages = new WorkerThread("images", sPathToImagesOnUsb + "/data/", m_Settings.sImagepath);
                 connect(m_workerImages, &WorkerThread::finished, this, &CMainWindow::copyImagesfinished);
@@ -308,14 +287,16 @@ void CMainWindow::usbInserted(QString pathUsb, bool bStartCopy)
             m_workerImages->start();
 
             //copy motioneye surveillance to usb
+            if( m_Settings.bKamera )
             {
+                m_bCopyMotionDone = false;
                 QString sPathToMotioneyeOnUsb = pathUsb + "/cam/";
 
                 qDebug() << "CMainWindow::usbInserted() Files to Transfer from " << m_Settings.sMotioneyepath << " to: " << sPathToMotioneyeOnUsb;
 
                 //need to clear the destination/target
                 QString sPathToMotioneyeOnUsbClear = pathUsb + "/cam/*";
-                clearUSB(sPathToMotioneyeOnUsbClear);
+                clearPath(sPathToMotioneyeOnUsbClear);
 
                 m_workerMotioneye = new WorkerThread("motion", m_Settings.sMotioneyepath, sPathToMotioneyeOnUsb);
                 connect(m_workerMotioneye, &WorkerThread::finished, this, &CMainWindow::copyMotioneyefinished);
@@ -387,14 +368,19 @@ void CMainWindow::onStartSlideshow_pressed()
 {
      qDebug() << "CMainWindow::onStartSlideshow_pressed";
 
-     if(m_pSlideShow == nullptr)
-     {
-         startSlideShow();
-     }
-     else
-     {
-         stopSlideShow();
-     }
+         m_pInfo = new CInfoShow();
+
+     m_pInfo->show();
+
+
+//     if(m_pSlideShow == nullptr)
+//     {
+//         startSlideShow();
+//     }
+//     else
+//     {
+//         stopSlideShow();
+//     }
 }
 
 void CMainWindow::copyBtn_pressed()
@@ -466,8 +452,9 @@ void CMainWindow::loadSettings()
     m_Settings.bAutoStart = settings.value("autostart", false).toBool();
     m_Settings.bDebug = settings.value("bDebug", false).toBool();
     m_Settings.sMotioneyepath = settings.value("motioneye", "/mnt/cam/").toString();
+    m_Settings.bKamera = settings.value("kamera", true).toBool();
 
-    qDebug() << version << m_Settings.sImagepath << m_Settings.sUsbmount << m_Settings.nTimeImage << m_Settings.bDebug << m_Settings.bAutoStart;
+    qDebug() << version << m_Settings.sImagepath << m_Settings.sUsbmount << m_Settings.nTimeImage << m_Settings.bDebug << m_Settings.bAutoStart << m_Settings.bKamera;
 }
 
 void CMainWindow::saveSettings()
@@ -481,6 +468,7 @@ void CMainWindow::saveSettings()
     settings.setValue("timeimage", m_CentralWidget.spinBoxTimeImage->value());
     settings.setValue("autostart", m_CentralWidget.checkBoxAutostart->isChecked());
     settings.setValue("bDebug", m_Settings.bDebug);
+    settings.setValue("kamera", m_Settings.bKamera);
 }
 
 void CMainWindow::updateSettingsUI()
@@ -567,7 +555,7 @@ bool CMainWindow::mountUSB()
     return ps.waitForFinished(5000);
 }
 
-bool CMainWindow::clearUSB(QString sPathtoClear)
+bool CMainWindow::clearPath(QString sPathtoClear)
 {
     qDebug() << "rm -rf" << sPathtoClear;
     QStringList parameters;

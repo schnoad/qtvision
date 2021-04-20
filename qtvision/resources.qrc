@@ -1,6 +1,6 @@
 <RCC>
-<qresource prefix="/">
-    <file>data/removeusb.jpg</file>
-    <file>data/startupscreen.jpg</file>
-</qresource>
+    <qresource prefix="/">
+        <file alias="removeusb">data/removeusb.jpg</file>
+        <file alias="startscreen">data/startupscreen.jpg</file>
+    </qresource>
 </RCC>
